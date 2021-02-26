@@ -1,7 +1,7 @@
 //--------------------------------------------------
 //              Réveil Avec un Arduino
 //          Fait en 2017 et mis à jours en 2021
-//                      V1.3.1 By Xmow
+//                      V1.4 By Xmow
 //                   GammaTroniques.fr
 //--------------------------------------------------
 
@@ -92,6 +92,41 @@ void printHello() //Affiche Bonjour sur l'écran avec une animation
   lcd.print("Il est");
 }
 
+void printAlarmON()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Alarme activee a:");
+  lcd.setCursor(0, 1);
+  if (alarmH < 10)
+  {
+    lcd.print("0");
+  }
+  lcd.print(alarmH);
+  lcd.setCursor(2, 1);
+  lcd.print(":");
+  lcd.setCursor(3, 1);
+  if (alarmM < 10)
+  {
+    lcd.print("0");
+  }
+  lcd.print(alarmM);
+  delay(3000);
+  lcd.clear();
+}
+
+void sendStateToApp()
+{
+  //on prépare la réponse pour l'application
+  String State = "Light:";
+  State += screenON;
+  State += ",Timer:";
+  State += alarm;
+
+  Serial.println(State);
+  HC06.println(State); //On l'envoie à l'app
+}
+
 void loop()
 {
   DateTime now = RTC.now(); //récupère la date et l'heure depuis le module RTC
@@ -116,6 +151,7 @@ void loop()
     delay(2000);
     lcd.clear();
     screenON = true; //variable de l'état de l'écran
+    sendStateToApp();
   }
 
   if (digitalRead(START_BUTTON) == 1 && screenON == true) //Si on appuit sur le bouton power et que l'écran est allumé, l'écran s'éteint
@@ -149,6 +185,7 @@ void loop()
     digitalWrite(RELAY_PIN, LOW);     //on éteint le relay
     digitalWrite(LCD_BACKLIGHT, LOW); //on éteint l'écairage de l'écran
     lcd.clear();                      //on efface l'écran
+    sendStateToApp();
   }
 
   if (digitalRead(ALARM_BUTTON) == 1 && alarm == false) //Si on appuit sur le bouton d'activation du réveil et que le réveil est désactivé, le réveil s'active
@@ -160,17 +197,8 @@ void loop()
     alarm = true; //active le réveil
 
     //affichage sur l'écran:
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Alarme activee a:");
-    lcd.setCursor(0, 1);
-    lcd.print(alarmH);
-    lcd.setCursor(2, 1);
-    lcd.print(":");
-    lcd.setCursor(3, 1);
-    lcd.print(alarmM);
-    delay(3000);
-    lcd.clear();
+    printAlarmON();
+    sendStateToApp();
   }
 
   if (digitalRead(ALARM_BUTTON) == 1 && alarm == true) //Si on appuit sur le bouton d'activation du réveil et que le réveil est activé, le réveil se désactive
@@ -180,6 +208,7 @@ void loop()
       //Pour évité de déclancher plusieurs appuis, on stop tous le code si le bouton reste appuyer
     }
     alarm = false; //désactivation du réveil
+    sendStateToApp();
   }
 
   if (screenON == true) //Si l'écran est allumé:
@@ -280,67 +309,80 @@ void loop()
     //Si on reçoit Light:1
     if (msg == "Light:1")
     {
-      //on allume l'écran et le relay
-      printHello();
-      delay(2000);
-      lcd.clear();
-      screenON = true; //variable de l'état de l'écran
+      if (screenON) //Si la lumière est déja allumé, on ne fait rien
+      {
+      }
+      else
+      {
+        //on allume l'écran et le relay
+        printHello();
+        delay(2000);
+        lcd.clear();
+        screenON = true; //variable de l'état de l'écran
+      }
     }
     //Si on reçoit Light:0
     else if (msg == "Light:0")
     {
-      //on éteint tous
-      screenON = false;         //variable de l'état de l'écran
-      DateTime now = RTC.now(); //récupère la date et l'heure depuis le module RTC
-
-      if (now.hour() >= 20) //Affiche Bonne nuit si il est plus tard que 20h
+      if (screenON == 0) //Si la lumière est déja éteinte, on ne fait rien
       {
-        lcd.clear();
-        lcd.setCursor(3, 0);
-        lcd.print("Bonne nuit");
-        lcd.setCursor(7, 1);
-        lcd.print("zZ");
-        delay(2000);
+      }
+      else
+      {
+        //on éteint tous
+        screenON = false;         //variable de l'état de l'écran
+        DateTime now = RTC.now(); //récupère la date et l'heure depuis le module RTC
+
+        if (now.hour() >= 20) //Affiche Bonne nuit si il est plus tard que 20h
+        {
+          lcd.clear();
+          lcd.setCursor(3, 0);
+          lcd.print("Bonne nuit");
+          lcd.setCursor(7, 1);
+          lcd.print("zZ");
+          delay(2000);
+          lcd.clear();
+        }
+        else //sinon on dit au revoir
+        {
+          lcd.clear();
+          lcd.setCursor(4, 0);
+          lcd.print("Au Revoir");
+          delay(2000);
+          lcd.clear();
+        }
+
+        digitalWrite(RELAY_PIN, LOW);     //on éteint le relay
+        digitalWrite(LCD_BACKLIGHT, LOW); //on éteint l'écairage de l'écran
         lcd.clear();
       }
-      else //sinon on dit au revoir
-      {
-        lcd.clear();
-        lcd.setCursor(4, 0);
-        lcd.print("Au Revoir");
-        delay(2000);
-        lcd.clear();
-      }
-
-      digitalWrite(RELAY_PIN, LOW);     //on éteint le relay
-      digitalWrite(LCD_BACKLIGHT, LOW); //on éteint l'écairage de l'écran
-      lcd.clear();
     }
 
     //Si on reçoit Timer:1
     if (msg == "Timer:1")
     {
-      //on active le réveil et on affiche sur l'écran
-      alarm = true;
-
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Alarme activee a:");
-      lcd.setCursor(0, 1);
-      lcd.print(alarmH);
-      lcd.setCursor(2, 1);
-      lcd.print(":");
-      lcd.setCursor(3, 1);
-      lcd.print(alarmM);
-      delay(3000);
-      lcd.clear();
+      if (alarm == 1) //Si le réveil est déja allumé, on ne fait rien
+      {
+      }
+      else
+      {
+        //on active le réveil et on affiche sur l'écran
+        alarm = true;
+        printAlarmON();
+      }
     }
 
     //Si on reçoit Timer:0
     else if (msg == "Timer:0")
     {
-      //on désactive le réveil
-      alarm = false;
+      if (alarm == 0) //Si le réveil est déja éteint, on ne fait rien
+      {
+      }
+      else
+      {
+        //on désactive le réveil
+        alarm = false;
+      }
     }
 
     //Si on reçoit un message qui commence par TimerH:   C'est que on va régler l'heure du réveil
@@ -393,6 +435,11 @@ void loop()
       int nowY = msgY.toInt(); //et on le converti en nombre (entier), et on l'enregistre dans la variable
 
       RTC.adjust(DateTime(nowY, nowMo, nowD, now.hour(), now.minute(), 0)); //et on l'enregistre dans le module RTC pour garder l'heure même si il ny a plus de courrent dans l'arduino.
+    }
+    //Si on reçoit state?  c'est que l'application demande l'état de l'écran et du réveil
+    else if (msg.startsWith("state?"))
+    {
+      sendStateToApp();
     }
 
     msg = ""; //on efface le message car on en a plus besoin
