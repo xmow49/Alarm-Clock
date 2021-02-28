@@ -413,7 +413,7 @@ void loop()
       msgM.remove(0, 5);   //on supprime les 5 premier caractères donc il nous reste : 1
       nowM = msgM.toInt(); //et on le converti en nombre (entier), et on l'enregistre dans la variable
 
-      RTC.adjust(DateTime(now.year(), now.month(), now.day(), nowH, nowM, 0)); //et on l'enregistre dans le module RTC pour garder l'heure même si il ny a plus de courrent dans l'arduino.
+      RTC.adjust(DateTime(now.year(), now.month(), now.day(), nowH, nowM, now.second())); //et on l'enregistre dans le module RTC pour garder l'heure même si il ny a plus de courrent dans l'arduino.
     }
 
     //Si on reçoit un message qui commence par NowD:   C'est que on va régler la date actuelle dans le module RTC
@@ -434,7 +434,7 @@ void loop()
       msgY.remove(0, 5);       //on supprime les 5 premier caractères donc il nous reste : 2021
       int nowY = msgY.toInt(); //et on le converti en nombre (entier), et on l'enregistre dans la variable
 
-      RTC.adjust(DateTime(nowY, nowMo, nowD, now.hour(), now.minute(), 0)); //et on l'enregistre dans le module RTC pour garder l'heure même si il ny a plus de courrent dans l'arduino.
+      RTC.adjust(DateTime(nowY, nowMo, nowD, now.hour(), now.minute(), now.second())); //et on l'enregistre dans le module RTC pour garder l'heure même si il ny a plus de courrent dans l'arduino.
     }
     //Si on reçoit state?  c'est que l'application demande l'état de l'écran et du réveil
     else if (msg.startsWith("state?"))
